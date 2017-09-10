@@ -47,8 +47,8 @@ class SimplePIController:
 
 
 controller = SimplePIController(0.1, 0.002)
-set_speed = 20
-controller.set_desired(set_speed)
+target_speed = 20
+controller.set_desired(target_speed)
 
 def unnormalize_steering(angle):
     return float(angle) * 25.0
@@ -69,11 +69,14 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        # image_array = np.reshape(cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY), (160, 320, 1))
+
         predictions = model.predict(image_array[None, :, :, :], batch_size=1)
-        new_steering_angle, target_speed = map(float, predictions[0])
+        new_steering_angle = float(predictions[0])
+
+        ## Note: I experimented with also predicting target speed, but this didn't seem to work well.
+        #new_steering_angle, target_speed = map(float, predictions[0])
         new_steering_angle = unnormalize_steering(new_steering_angle)
-        target_speed = unnormalize_speed(target_speed)
+        # target_speed = unnormalize_speed(target_speed)
 
         smoothed_steering_angle = (float(steering_angle) + new_steering_angle) / 2
 

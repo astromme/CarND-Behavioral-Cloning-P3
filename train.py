@@ -32,12 +32,14 @@ def add_measurement(driving_log_dir, img_path, steering_angle, speed):
 
     # add the image
     images.append(image)
-    measurements.append([normalize_steering(steering_angle), normalize_speed(speed)])
+    #measurements.append([normalize_steering(steering_angle), normalize_speed(speed)])
+    measurements.append(normalize_steering(steering_angle))
 
     # add a flipped version of the image
     image_flipped = np.fliplr(image)
     images.append(image_flipped)
-    measurements.append([-normalize_steering(steering_angle), normalize_speed(speed)])
+    measurements.append(-normalize_steering(steering_angle))
+    #measurements.append([-normalize_steering(steering_angle), normalize_speed(speed)])
 
 
 # read in the driving logs passed in as command line arguments
@@ -92,7 +94,7 @@ model.add(Flatten())
 model.add(Dense(64, activation='relu'))
 model.add(Dropout(0.25))
 model.add(Dense(32, activation='relu'))
-model.add(Dense(2))
+model.add(Dense(1))
 
 model.summary()
 
@@ -111,6 +113,6 @@ tensorboard = keras.callbacks.TensorBoard(
     )
 
 # split the training data into 80% train, 20% validation
-model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=2, callbacks=[tensorboard])
+model.fit(X_train, y_train, validation_split=0.2, shuffle=True, epochs=1, callbacks=[tensorboard])
 
 model.save('model.h5')

@@ -20,7 +20,8 @@ def normalize_speed(speed):
 # adds measurements to the dataset from the given image path and steering angle/speed
 def add_measurement(driving_log_dir, img_path, steering_angle, speed):
 
-    #randomly drop 60% of the straight training data
+    # randomly drop 60% of the straight training data
+    # I learned about this technique at https://discussions.udacity.com/t/filtering-out-70-of-the-images-that-are-straight/353824/12
     prob = random.random()
     if prob > 0.4 and abs(steering_angle) < 0.05 :
         return # don't include this line in the data

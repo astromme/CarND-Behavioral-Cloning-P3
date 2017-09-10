@@ -1,8 +1,9 @@
 import argparse
 import base64
-from datetime import datetime
+from datetime import datetime, timedelta
 import os
 import shutil
+import cv2
 
 import numpy as np
 import socketio
@@ -15,6 +16,8 @@ from io import BytesIO
 from keras.models import load_model
 import h5py
 from keras import __version__ as keras_version
+
+last_timestamp = datetime.now()
 
 sio = socketio.Server()
 app = Flask(__name__)
@@ -44,9 +47,14 @@ class SimplePIController:
 
 
 controller = SimplePIController(0.1, 0.002)
-set_speed = 9
+set_speed = 20
 controller.set_desired(set_speed)
 
+def unnormalize_steering(angle):
+    return float(angle) * 25.0
+
+def unnormalize_speed(speed):
+    return (float(speed) + 0.5) * 30.0
 
 @sio.on('telemetry')
 def telemetry(sid, data):
@@ -61,12 +69,24 @@ def telemetry(sid, data):
         imgString = data["image"]
         image = Image.open(BytesIO(base64.b64decode(imgString)))
         image_array = np.asarray(image)
-        steering_angle = float(model.predict(image_array[None, :, :, :], batch_size=1))
+        # image_array = np.reshape(cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY), (160, 320, 1))
+        predictions = model.predict(image_array[None, :, :, :], batch_size=1)
+        new_steering_angle, target_speed = map(float, predictions[0])
+        new_steering_angle = unnormalize_steering(new_steering_angle)
+        target_speed = unnormalize_speed(target_speed)
 
+        smoothed_steering_angle = (float(steering_angle) + new_steering_angle) / 2
+
+        controller.set_desired(target_speed)
         throttle = controller.update(float(speed))
 
-        print(steering_angle, throttle)
-        send_control(steering_angle, throttle)
+        print('steering: {:0.2f}, target_speed: {:0.2f}, throttle: {:0.2f}'.format(new_steering_angle, target_speed, throttle))
+
+        now = datetime.now()
+        fps = timedelta(minutes=1) / (now - last_timestamp)
+        # print('{:0.2f}'.format(fps))
+        send_control(new_steering_angle, throttle)
+
 
         # save frame
         if args.image_folder != '':
